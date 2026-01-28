@@ -1,5 +1,80 @@
 import chalk from "chalk"
 import prompts from "prompts"
+import fs from "fs-extra"
+import path from "path"
+import os from "os"
+import { banner } from "./ui.mjs"
+import { rootMenu } from "./menu.mjs"
+import { repoController } from "./controller.mjs"
+import { searchFlow, replaceFlow, branchFlow, configFlow } from "./integrations.mjs"
+import { exportLog } from "./exporter.mjs"
+import { logger } from "./logger.mjs"
+import { loadPlugins, runHook } from "./plugins.mjs"
+import { bootstrap } from "./bootstrap.mjs"
+
+const state={
+  user:null,
+  token:null,
+  repo:null,
+  branch:"main",
+  zip:null,
+  workdir:null,
+  plugins:[],
+  dry:false
+}
+
+async function auth(){
+  const r=await prompts([
+    {type:"text",name:"user",message:"GitHub Username"},
+    {type:"password",name:"token",message:"GitHub Token"},
+    {type:"text",name:"repo",message:"Repo URL"},
+    {type:"text",name:"branch",message:"Branch",initial:"main"},
+    {type:"text",name:"zip",message:"ZIP path"}
+  ])
+  Object.assign(state,r)
+}
+
+async function loadAll(){
+  const pdir=path.join(process.cwd(),"plugins")
+  state.plugins=loadPlugins(pdir)
+}
+
+export async function runApp(){
+  await auth()
+  await loadAll()
+  await bootstrap(state)
+  while(true){
+    banner("RepoControl",state.repo,state.branch)
+    const m=await rootMenu()
+    if(m==="controller"){
+      await repoController(state)
+    }
+    if(m==="search"){
+      await searchFlow(state)
+    }
+    if(m==="replace"){
+      await replaceFlow(state)
+    }
+    if(m==="branch"){
+      await branchFlow(state)
+    }
+    if(m==="config"){
+      await configFlow()
+    }
+    if(m==="export"){
+      const p=exportLog(logger.dump())
+      console.log("Saved:",p)
+    }
+    if(m==="plugins"){
+      await loadAll()
+      console.log("Plugins loaded:",state.plugins.length)
+    }
+    if(m==="exit"){
+      process.exit(0)
+    }
+  }
+}import chalk from "chalk"
+import prompts from "prompts"
 import ora from "ora"
 import fs from "fs-extra"
 import path from "path"
