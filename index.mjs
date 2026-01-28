@@ -1,3 +1,4 @@
-import { runApp } from "./src/app.mjs"
+#!/usr/bin/env node
+import { main } from "./src/main.mjs"
 
-runApp()
+main()
